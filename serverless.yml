@@ -1,0 +1,74 @@
+org: priscilla
+service: sra-backend
+frameworkVersion: '3'
+
+app: sra-backend
+
+plugins:
+  - '@serverless/enterprise-plugin'
+
+provider:
+  name: aws
+  runtime: nodejs16.x
+  profile: ${opt:profile, "serverless-tutorial"} # sls deploy --profile serverless-tutorial
+  region: ${opt:region, "eu-west-2"} # sls deploy  --region eu-west-2
+  stage: ${opt:stage, "dev"} #sls deploy --stage dev || test, qa, prod
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action: 
+            - dynamodb:PutItem
+            - dynamodb:Scan
+            - dynamodb:GetItem
+            - dynamodb:DeleteItem
+            - dynamodb:UpdateItem
+          Resource: arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:custom.DynamoDBTableName}
+
+
+functions:
+  api:
+    handler: api.handler
+    events:
+      - http:
+          path: users
+          method: GET
+          cors: true
+      - http:
+          path: users
+          method: POST
+          cors: true
+      - http:
+          path: users/{id}
+          method: PUT
+          cors: true
+      - http:
+          path: users/{id}
+          method: GET
+          cors: true
+      - http:
+          path: users/{id}
+          method: DELETE
+          cors: true
+    environment: 
+      TABLE_NAME: ${self:custom.DynamoDBTableName}
+
+custom:
+  DynamoDBTableName: ${self:service}-users-table-${self:provider.stage} # sra-backend-users-table-test
+
+resources:
+  Resources:
+    myDynamoDBTable: 
+      Type: AWS::DynamoDB::Table
+      Properties: 
+        AttributeDefinitions: 
+          - 
+            AttributeName: user_id
+            AttributeType: S
+          
+        KeySchema: 
+          - 
+            AttributeName: user_id
+            KeyType: HASH # or RANGE
+        BillingMode: PAY_PER_REQUEST
+        TableName: ${self:custom.DynamoDBTableName}
